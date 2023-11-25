@@ -1,0 +1,93 @@
+body {
+  background: pink;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.chat {
+  border:1px solid;
+  border-radius: 5px;
+  padding: 5px;
+  margin-bottom: 5px;
+}
+
+.chat.taskList {
+  display: block;
+  width: fit-content;
+  width: 23rem;
+}
+.chat.bubble {
+  width: fit-content;
+  width: 23rem;
+}
+
+.choiceButton {
+  margin-top: 5px;
+  padding: 2px;
+}
+
+.completion {
+  margin-left: 5px;
+}
+
+.posePanelWebcam {
+  display: none;
+  padding-top: 5px;
+}
+
+.debug {
+  margin-bottom: 10px;
+  border:1px solid;
+  border-radius: 5px;
+  padding: 5px;
+  margin-bottom: 5px;
+  width: fit-content;
+}
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  /* width: 640px; */
+}
+
+#label-container {
+  padding-left: 5px;
+}
+
+.posePanel{
+  margin-bottom: 10px;
+  border:1px solid;
+  border-radius: 5px;
+  padding: 5px;
+  margin-bottom: 5px;
+  width: fit-content;
+}
+
+.taskSelect {
+  padding-bottom: 25px;
+}
+.form {
+  width: 500px;
+}
+.field {
+  display: flex;
+  justify-content: space-between;
+  padding-top: 5px;
+}
+.formButton {
+  display: flex;
+  justify-content: space-between;
+  padding-top: 10px;
+}
+.form textarea {
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+  width: 300px;
+}
+.form input {
+  width: 300px;
+}

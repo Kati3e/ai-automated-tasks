@@ -1,0 +1,33 @@
+<html>
+<!--Simple web form with text input and task list selection buttons and task completion buttons-->
+  <header>
+    <link rel="stylesheet" href="main.css">
+    <script src="Classes/UI.js"></script>
+    <script src="core.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/pose@0.8/dist/teachablemachine-pose.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </header>
+  <body>
+    <div class="header">AI Automated Tasks<button class="reset" onclick="resetData()">Reset</button></div>
+
+    <div class="posePanel">
+      <span>Webcam</span>
+      <button type="button" onclick="init()">Start</button>
+      <button type="button" onclick="end()">Stop</button>
+      <div class="posePanelWebcam">
+        <span><canvas id="canvas"></canvas></span>
+        <span id="label-container"></span>
+      </div>
+    </div>
+
+    <div class="chat"></div>
+    <div class="inputArea" style="width:100%;">
+      <span class="input"><input></input></span>
+      <span class="enter"><button type="button" onclick="chat_enter()">Enter</button></span>
+    </div>
+
+
+
+  </body>
+</html>

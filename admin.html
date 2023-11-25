@@ -1,0 +1,20 @@
+<html>
+  <header>
+    <link rel="stylesheet" href="main.css">
+    <script src="admin.js"></script>
+  </header>
+  <body>
+    <div class="header">AI Automated Tasks Admin<button class="reset" onclick="resetCompletion()">Reset Completion</button><button class="reset" onclick="resetEvents()">Reset Events</button><button class="reset" onclick="resetData()">Reset DB</button></div>
+
+    <div class="taskSelect">
+      <label for="tasks">Tasks</label>
+      <select name="tasks" id="tasks">
+        <option value="-1">------</option>
+      </select>
+      <button onclick="addTask()">Add</button>
+      <button onclick="removeTask()">Remove</button>
+    </div>
+
+    <div class="form"><form onsubmit="formSubmit(event)"></form></div>
+  </body>
+</html>
