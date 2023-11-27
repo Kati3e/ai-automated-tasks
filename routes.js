@@ -152,7 +152,7 @@ var server = http.createServer(function(request, response) {
         var taskIndex = dbJson.findIndex((element) => element.id == id); // TODO: number == string
         const is_new = taskIndex === -1;
         if (is_new) taskIndex = Number(params.id);
-        dbJson[taskIndex] = {...dbJson[taskIndex], ...params}; // Merge curr task with task data from url
+        dbJson[taskIndex] = new Task({...dbJson[taskIndex], ...params}); // Merge curr task with task data from url
 
         let events = dbJson[taskIndex].events || [];
         if (typeof events === 'string') events = JSON.parse(events);
