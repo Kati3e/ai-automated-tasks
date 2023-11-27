@@ -103,7 +103,7 @@ function updateChat() {
   //   choicesDiv.style = 'display: flex;flex-wrap: wrap;width: 640px;';
   // }
 }
-function valueUpdated(e) {
+function valueUpdated(e) { // FIXME: Needs reworking
   // TODO: When enter is used and no suggestions are available integrate into an AI model
   const val = e.target.value;
   // Lookup feeling in tasks
