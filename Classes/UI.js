@@ -7,26 +7,38 @@ class UI {
     };
   }
 
-  addChatBubble(text, choices, extra) { // split into two, chatbubble with tasks, chatbubble with options (done, cancel, etc)
-    const id = extra && extra.id ? extra.id : '';
-    const classname = extra && extra.class ? extra.class : 'taskList';
+  // split into two, chatbubble with tasks, chatbubble with options (done, cancel, etc)
+  // context: {type: 'tasks', tasks: []} || {type: 'options', options []} // FIXME: Left off
+  addChatBubble(context, extra) {
+    this.chat.output.innerHTML += this.getChatBubble(context, extra);
+  }
+  getChatBubble(context, extra) {
+    const id = context.id || 0;
+    const text = context.text;
+    let classname, tasks, options;
+    if (context.type === 'tasks') { // [{!id:}]
+      tasks = context.tasks;
+      classname = 'taskList';
+    }
+    if (context.type === 'options') { // [id:]
+      options = context.options;
+      classname = 'bubble'; // Rename to 'optionList'
+    }
 
-    this.chat.outputinnerHTML += `
+    const buttons = options || tasks;
+
+    return `
       <div id="task${id}" class="chat ${classname}">
         <div class="text">${text}</div>
-        ${choices && choices.length ? `<div class="choices">${choiceHTML(choices)}</div>` : ''}
+        ${buttons && buttons.length ? `<div class="choices">${optionsButtons(buttons)}</div>` : ''}
       </div>`;
-  }
 
-  button(data) {
-    const id = data.id;
-    const name = data.name;
 
-    return `<button id='task${id}' class='task' onClick='selectionMade(this, ${JSON.stringify(data)})'>${name}</button>`
-  }
-
-  choiceHTML(choices) {
-    return choices && choices.map(choice => `<div class="choiceButton">${button(choice)}</div>`).join('') || ""
+    function optionsButtons(buttons) {
+      return buttons && buttons.map(button => {
+        return `<div class="choiceButton"><button id='task${context.type === 'options' ? button.task.id : button.id}' class='task' onClick='selectionMade(this, ${JSON.stringify(button)})'>${button.name}</button></div>`;
+      }).join('') || "";
+    }
   }
   //TM POSE
   // Header bar
