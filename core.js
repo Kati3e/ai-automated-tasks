@@ -29,9 +29,10 @@ let taskArr = [];
 let timeOfDay = '';
 let lastTimeOfDay = getTimeOfDay();
 
-const UIHelpers = new UI();
+let UIHelpers;
 
 document.addEventListener("DOMContentLoaded", () => {
+  UIHelpers = new UI(document);
   const input = document.querySelector(".inputArea .input input");
   input.addEventListener("input", valueUpdated);
   fetch('http://127.0.0.1:8080/resetIdle', {
@@ -71,11 +72,15 @@ async function updateTimeOfDayTasks(currTimeOfDay, skipNotification) {
   if (!skipNotification) sendNotification(`Good ${currTimeOfDay}!`, 'Please consider completing a task.');
 
   if (!timeOfDayTasks.length) return;
-  const chatDiv = document.querySelector("div.chat");
-  const choices = timeOfDayTasks.map(e => {
+  const tasks = timeOfDayTasks.map(e => {
     return { id: e.id, name: e.name, task: e }
   });
-  chatDiv.innerHTML += chatBubble(`Here are some tasks for ${currTimeOfDay}:`, choices, { class: `taskList suggestedTimeOfDay${currTimeOfDay.charAt(0).toUpperCase() + currTimeOfDay.slice(1)}` });
+  UIHelpers.addChatBubble({
+    type: 'tasks',
+    text: `Here are some tasks for ${currTimeOfDay}:`,
+    tasks: tasks,
+    classname: `suggestedTimeOfDay${currTimeOfDay.charAt(0).toUpperCase() + currTimeOfDay.slice(1)}`
+  });
 
   // if (timeOfDayTasks.length > 5) { // FIXME: Make this default css
   //   const choicesDiv = chatDiv.querySelector('.choices [class*=suggestedTimeOfDayMorning]');
@@ -90,9 +95,8 @@ async function updateTimeOfDayTasks(currTimeOfDay, skipNotification) {
   console.log('response', response);
 }
 function updateChat() {
-  const uncompletedTasks = taskArr.filter(task => task.status !== 'Done');
-  const chatDiv = document.querySelector("div.chat");
-  chatDiv.innerHTML += UIHelpers.chatBubble("Here are the uncompleted tasks I know about:", uncompletedTasks);
+  const uncompletedTasks = taskArr.filter(task => task.status !== 'done');
+  UIHelpers.addChatBubble({ type: 'tasks', text: 'Here are the uncompleted tasks I know about:', tasks: uncompletedTasks});
 
   // if (uncompletedTasks.length > 5) { // FIXME: Make this default css
   //   const choicesDiv = chatDiv.querySelector('.choices');
@@ -116,7 +120,7 @@ function valueUpdated(e) {
       chatDiv.innerHTML += `<div class="bubble suggest"></div>`;
       suggestions = document.querySelector('.chat .suggest');
     }
-    suggestions.innerHTML = chatBubble('May I suggest:', tasks);
+    suggestions.innerHTML = UIHelpers.addChatBubble({type: 'tasks', text: 'May I suggest:', tasks: tasks}); // Search
     chatDiv.appendChild(suggestions);
   } else { // No tasks, clear list
     let suggestions = document.querySelector('.chat .suggest');
@@ -178,7 +182,7 @@ function selectionMade(element, choice) { // TODO: Refactor
       }
     });
 
-    chatDiv.innerHTML += chatBubble(`Alright, I have marked, "${taskName}", as done.`, [], { class: 'bubble done', id: taskID }); // TODO: Trigger AI
+    UIHelpers.addChatBubble({ type: 'options', text: `Alright, I have marked, "${taskName}", as done.`, options: [], classname: 'done', id: taskID }); // TODO: Trigger AI
   } else if (selectedChoiceName === 'Cancel') {
     // Send a counter to keep track of the number of times retired
     fetch(`http://127.0.0.1:8080/edit_task?id=${taskID}&action={"type":"canceled","subtype":"${suggestedClass}"}`, {
@@ -196,7 +200,7 @@ function selectionMade(element, choice) { // TODO: Refactor
         button.remove();
       }
     });
-    chatDiv.innerHTML += chatBubble(`Alright, the task, "${taskName}", has been put on hold for now.`, [], { class: 'bubble cancel', id: taskID });
+    UIHelpers.addChatBubble({ type: 'options', text: `Alright, the task, "${taskName}", has been put on hold for now.`, options: [], classname: 'cancel', id: taskID });
   } else { // Task button selected
     fetch(`http://127.0.0.1:8080/edit_task?id=${selectedChoiceID}&action={"type":"selected","subtype":"${suggestedClass}"}`, {
       method: "GET"
@@ -205,10 +209,22 @@ function selectionMade(element, choice) { // TODO: Refactor
 
     const bubbleElement = chatDiv.querySelector(`.bubble.waiting#task${selectedChoiceID}`);
     if (bubbleElement === null) {
-      chatDiv.innerHTML += UIHelpers.chatBubble(`Alright, I'll be awaiting your completion on, "${selectedChoiceName}"`, [{id: choice.id, name: 'Done', task: choice}, {id: choice.id, name: 'Cancel', task: choice}], { class: `bubble waiting ${suggestedClass}`, id: selectedChoiceID });
+      UIHelpers.addChatBubble({
+        type: 'options',
+        text: `Alright, I'll be awaiting your completion on, "${selectedChoiceName}"`,
+        options: [{id: choice.id, name: 'Done', task: choice}, {id: choice.id, name: 'Cancel', task: choice}],
+        classname: `waiting ${suggestedClass}`,
+        id: selectedChoiceID
+      });
     } else {
       if (bubbleElement.querySelector('.canceled')) {
-        chatDiv.innerHTML += UIHelpers.chatBubble(`Alright, I'll be awaiting your completion on, "${selectedChoiceName}"`, [{name: 'Done', task: choice}, {name: 'Cancel', task: choice}], { class: `bubble waiting ${suggestedClass}`, id: selectedChoiceID });
+        UIHelpers.addChatBubble({
+          type: 'options',
+          text: `Alright, I'll be awaiting your completion on, "${selectedChoiceName}"`,
+          options: [{name: 'Done', task: choice}, {name: 'Cancel', task: choice}],
+          classname: `waiting ${suggestedClass}`,
+          id: selectedChoiceID
+        });
       }
     }
   }
@@ -274,21 +290,6 @@ function sendNotification(title, body, link, icon) {
 }
 
 //
-// UI Elements TODO: Refactor
-//
-const chatBubble = (text, choices, extra) => {
-  return `
-    <div id="task${extra && extra.id ? extra.id : ''}" class="chat ${extra && extra.class ? extra.class : 'taskList'}">
-      <div class="text">${text}</div>
-      ${choices && choices.length ? `<div class="choices">${choiceHTML(choices)}</div>` : ''}
-    </div>`;
-};
-const button = data => {
-  return `<button id='task${data.id}' class='task' onClick='selectionMade(this, ${JSON.stringify(data)})'>${data.name}</button>`
-};
-const choiceHTML = choices => choices && choices.map(choice => `<div class="choiceButton">${button(choice)}</div>`).join('') || "";
-
-//
 // Timers
 //
 setInterval(() => {
@@ -324,7 +325,13 @@ setInterval(() => {
         const chatIdledBubble = document.querySelector("div.chat .chat.bubble.waiting.suggestedIdled");
         const chatDiv = document.querySelector("div.chat");
 
-        const idleBubble = chatBubble(`You've been idled for, ${timeIdled}s, may I recommend this task, "${randFilteredTask.name}"`, [{name: 'Done', task: randFilteredTask}, {name: 'Cancel', task: randFilteredTask}], { class: 'bubble waiting suggestedIdled', id: task.id });
+        const idleBubble = UIHelpers.getChatBubble({
+          type: 'options',
+          text: `You've been idled for, ${timeIdled}s, may I recommend this task, "${randFilteredTask.name}"`,
+          options: [{name: 'Done', task: randFilteredTask}, {name: 'Cancel', task: randFilteredTask}],
+          classname: 'waiting suggestedIdled',
+          id: randFilteredTask.id
+        });
 
         if (chatIdledBubble) {
           chatIdledBubble.outerHTML = idleBubble;
