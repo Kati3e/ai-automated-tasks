@@ -65,7 +65,7 @@ async function updateTimeOfDayTasks(currTimeOfDay, skipNotification) {
   if (!currTimeOfDay) currTimeOfDay = timeOfDay;
   const timeOfDayTasks = taskArr.filter(task => {
     const when = task.when || [];
-    if (task.status === 'Done') return false;
+    if (task.status === 'done') return false;
     if (!skipCertainty) return when.filter(w => w.when === currTimeOfDay && w.certainty >= w.weight).length; // && w.certainty > 50); // TODO: && certainty > 50 | when: {id:0,certainty:5,when:morning}
     return true;
   })
@@ -109,7 +109,7 @@ function valueUpdated(e) { // FIXME: Needs reworking
   // Lookup feeling in tasks
   const tasks = [];
   if (val) taskArr.forEach(task => {
-    if (task.status !== 'Done' && (task.name.includes(val)  || task.type.includes(val) || task.when.filter(w => w.when === val))) { //.includes(val))) { // FIXME:
+    if (task.status !== 'done' && (task.name.includes(val)  || task.type.includes(val) || task.when.filter(w => w.when === val))) { //.includes(val))) { // FIXME:
       tasks.push(task);
     }
   });
@@ -153,7 +153,7 @@ function selectionMade(element, choice) { // TODO: Refactor
   if (selectedChoiceName === 'Done') {
     taskArr.forEach(task => {
       if (task.id === selectedChoiceID) {
-        task.status = 'Done';
+        task.status = 'done';
 
         fetch(`http://127.0.0.1:8080/edit_task?id=${task.id}&status=${task.status}&action={"type":"completed","subtype":"${suggestedClass}"}`, {
           method: "GET"
@@ -357,3 +357,145 @@ setInterval(() => {
     timeIdled = json;
   });
 }, 1000);
+
+//
+// TMPose Code
+//
+const path = `./Pose/my_model/`;
+let model, webcam, ctx, labelContainer, maxPredictions;
+const brat = new Audio(path + 'brat.mp3');
+const hello = new Audio(path + 'hello.mp3');
+
+async function end() {
+  webcam.stop();
+  const panel = document.querySelector(".posePanelWebcam");
+  panel.style.display = 'none';
+}
+
+async function init() {
+  const modelURL = path + "model.json";
+  const metadataURL = path + "metadata.json";
+  const panel = document.querySelector(".posePanelWebcam");
+  panel.style.display = 'flex';
+
+  // load the model and metadata
+  // Refer to tmImage.loadFromFiles() in the API to support files from a file picker
+  // Note: the pose library adds a tmPose object to your window (window.tmPose)
+  model = await tmPose.load(modelURL, metadataURL);
+  maxPredictions = model.getTotalClasses();
+
+  // Convenience function to setup a webcam
+  const size = 200;
+  const flip = false; // whether to flip the webcam
+  webcam = new tmPose.Webcam(size, size, flip); // width, height, flip
+  await webcam.setup(); // request access to the webcam
+  await webcam.play();
+  window.requestAnimationFrame(loop);
+
+  // append/get elements to the DOM
+  const canvas = document.getElementById("canvas");
+  canvas.style.display = "initial";
+  canvas.width = size; canvas.height = size;
+  ctx = canvas.getContext("2d");
+  labelContainer = document.getElementById("label-container");
+  for (let i = 0; i < maxPredictions; i++) { // and class labels
+      labelContainer.appendChild(document.createElement("div"));
+  }
+}
+
+async function loop(timestamp) {
+  webcam.update(); // update the webcam frame
+  await predict();
+  window.requestAnimationFrame(loop);
+}
+
+async function predict() {
+  // Prediction #1: run input through posenet
+  // estimatePose can take in an image, video or canvas html element
+  const { pose, posenetOutput } = await model.estimatePose(webcam.canvas);
+  // Prediction 2: run input through teachable machine classification model
+  const prediction = await model.predict(posenetOutput);
+
+  for (let i = 0; i < maxPredictions; i++) {
+      const classPrediction =
+          prediction[i].className + ": " + prediction[i].probability.toFixed(2);
+      labelContainer.childNodes[i].innerHTML = classPrediction;
+if (pose && prediction[i].className === 'brat' && prediction[i].probability.toFixed(2) >= 1.00) {
+  brat.play();
+} else if (pose && prediction[i].className === 'hello' && prediction[i].probability.toFixed(2) >= 1.00) {
+  hello.play();
+}
+  }
+
+  // finally draw the poses
+  drawPose(pose);
+}
+
+function drawPose(pose) {
+  if (webcam.canvas) {
+      ctx.drawImage(webcam.canvas, 0, 0);
+      // draw the keypoints and skeleton
+      if (pose) {
+          const minPartConfidence = 0.5;
+          tmPose.drawKeypoints(pose.keypoints, minPartConfidence, ctx);
+          tmPose.drawSkeleton(pose.keypoints, minPartConfidence, ctx);
+      }
+  }
+}
+
+// local LLM API
+//
+const HOST = 'localhost:5000';
+const URI = `http://${HOST}/api/v1/generate`;
+function postRequest(prompt) { // To local LLM
+  request = {
+    'prompt': prompt,
+    'max_new_tokens': 250,
+    'auto_max_new_tokens': false,
+    'max_tokens_second': 0,
+    // Generation params. If 'preset' is set to different than 'None', the values
+    // in presets/preset-name.yaml are used instead of the individual numbers.
+    'preset': 'None',
+    'do_sample': true,
+    'temperature': 0.7,
+    'top_p': 0.1,
+    'typical_p': 1,
+    'epsilon_cutoff': 0,  // In units of 1e-4
+    'eta_cutoff': 0,  // In units of 1e-4
+    'tfs': 1,
+    'top_a': 0,
+    'repetition_penalty': 1.18,
+    'repetition_penalty_range': 0,
+    'top_k': 40,
+    'min_length': 0,
+    'no_repeat_ngram_size': 0,
+    'num_beams': 1,
+    'penalty_alpha': 0,
+    'length_penalty': 1,
+    'early_stopping': false,
+    'mirostat_mode': 0,
+    'mirostat_tau': 5,
+    'mirostat_eta': 0.1,
+    'grammar_string': '',
+    'guidance_scale': 1,
+    'negative_prompt': '',
+
+    'seed': -1,
+    'add_bos_token': true,
+    'truncation_length': 2048,
+    'ban_eos_token': false,
+    'custom_token_bans': '',
+    'skip_special_tokens': true,
+    'stopping_strings': []
+  }
+
+  fetch(URI, {
+    method: "POST",
+    body: JSON.stringify(request),
+    // headers: {
+    //   "Content-type": "application/json; charset=UTF-8"
+    // }
+  })
+  .then((response) => response.json())
+  .then((json) => console.log(json));
+}
